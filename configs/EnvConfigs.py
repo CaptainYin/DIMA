@@ -1,9 +1,4 @@
 from configs.Config import Config
-# from env.starcraft.StarCraft import StarCraft
-from env.pettingzoo.mpe_env import PettingZooMPEEnv
-from env.football.Football import Football
-from env.mamujoco.multiagent_mujoco.mujoco_multi import MujocoMulti
-# from env.smacv2.smacv2_env import SMACv2Env
 
 from configs.EnvCurriculum import EnvCurriculum, EnvCurriculumSample, EnvCurriculumPrioritizedSample
 
@@ -22,6 +17,8 @@ class StarCraftConfig(EnvConfig):
         self.seed = seed
 
     def create_env(self):
+        from env.starcraft.StarCraft import StarCraft
+
         return StarCraft(self.env_name, self.seed)
     
 class SMACv2Config(EnvConfig):
@@ -31,6 +28,8 @@ class SMACv2Config(EnvConfig):
         self.seed = seed
 
     def create_env(self):
+        from env.smacv2.smacv2_env import SMACv2Env
+
         args = {
             'map_name': self.map_name,
             'seed': self.seed,
@@ -45,6 +44,8 @@ class PettingZooConfig(EnvConfig):
         self.continuous_action = continuous_action
 
     def create_env(self):
+        from env.pettingzoo.mpe_env import PettingZooMPEEnv
+
         return PettingZooMPEEnv(self.env_name, self.seed, self.continuous_action)
 
 class FootballConfig(EnvConfig):
@@ -53,6 +54,8 @@ class FootballConfig(EnvConfig):
         self.seed = seed
 
     def create_env(self):
+        from env.football.Football import Football
+
         return Football(self.env_name)
     
 class MAMujocoConfig(EnvConfig):
@@ -72,7 +75,48 @@ class MAMujocoConfig(EnvConfig):
         }
 
     def create_env(self):
+        from env.mamujoco.multiagent_mujoco.mujoco_multi import MujocoMulti
+
         return MujocoMulti(env_args = self.env_args)
+
+
+class BidexHandsConfig(EnvConfig):
+    def __init__(
+        self,
+        task_name,
+        seed,
+        backend="isaacgym",
+        num_envs=1,
+        episode_limit=200,
+        headless=True,
+        rl_device="cuda:0",
+        sim_device="cuda:0",
+        pipeline="gpu",
+    ):
+        self.task_name = task_name
+        self.seed = seed
+        self.backend = backend
+        self.num_envs = num_envs
+        self.episode_limit = episode_limit
+        self.headless = headless
+        self.rl_device = rl_device
+        self.sim_device = sim_device
+        self.pipeline = pipeline
+
+    def create_env(self):
+        from env.bidexhands.bidexhands_env import BiDexHandsEnv
+
+        return BiDexHandsEnv(
+            task_name=self.task_name,
+            seed=self.seed,
+            backend=self.backend,
+            num_envs=self.num_envs,
+            episode_limit=self.episode_limit,
+            headless=self.headless,
+            rl_device=self.rl_device,
+            sim_device=self.sim_device,
+            pipeline=self.pipeline,
+        )
 
 # class FlatlandConfig(EnvConfig):
 #     def __init__(self,

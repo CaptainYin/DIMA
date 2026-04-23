@@ -222,11 +222,11 @@ class DreamerLearner:
             self.rew_end_model_opt = configure_optimizer(self.rew_end_model, self.config.rew_end_model_opt_cfg['lr'], self.config.rew_end_model_opt_cfg['weight_decay'])
 
         self.actor_optimizer  = torch.optim.Adam(self.actor.parameters(), lr=self.config.ACTOR_LR,
-                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 0.00001,
-                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 1e-8)
+                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 0.00001,
+                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 1e-8)
         self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.config.VALUE_LR,
-                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 0.00001,
-                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO] else 1e-8)
+                                                 weight_decay=0.0 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 0.00001,
+                                                 eps=1e-5 if self.env_type in [Env.PETTINGZOO, Env.GRF, Env.MAMUJOCO, Env.BIDEXHANDS] else 1e-8)
 
     def params(self):
         return {'state_decoder': {k: v.cpu() for k, v in self.state_decoder.state_dict().items()},
@@ -478,10 +478,10 @@ class DreamerLearner:
         self.rew_end_model.eval()
 
         ## train actor_critic
-        if self.train_count == 10:
+        if self.train_count == 1: #yhq
             print('Start training actor & critic...')
 
-        if self.train_count > 9:
+        if self.train_count > 0:
             to_log = []
 
             pbar = tqdm(range(self.config.EPOCHS if self.cur_wandb_epoch > 0 else self.config.ac_steps_first_epoch),
@@ -694,7 +694,7 @@ class DreamerLearner:
             inds = np.random.permutation(obs.shape[0])
 
             step = 2000
-            if self.env_type in [Env.MAMUJOCO]:
+            if self.env_type in [Env.MAMUJOCO, Env.BIDEXHANDS]:
                 # if environment is MAMujoco, we set the step according to the num_mini_batch
                 step = int(len(inds) / self.config.num_mini_batch)
 
@@ -819,7 +819,7 @@ class DreamerLearner:
                 filled=torch.ones(data['done'].shape[0], dtype=torch.bool)
             )
 
-        elif self.env_type == Env.MAMUJOCO:
+        elif self.env_type in [Env.MAMUJOCO, Env.BIDEXHANDS]:
             episode = MamujocoEpisode(
                 observation=torch.FloatTensor(data['observation'].copy()),              # (Length, n_agents, obs_dim)
                 shared_obs=torch.FloatTensor(data['shared_obs'].copy()),                # (Length, n_agents, state_dim)
@@ -964,4 +964,3 @@ class DreamerLearner:
         self.critic.eval()
 
         self.log_compounding_errors(None)
-

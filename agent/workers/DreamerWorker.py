@@ -8,8 +8,7 @@ from environments import Env
 import numpy as np
 # import ipdb
 
-@ray.remote
-class DreamerWorker:
+class DreamerWorkerBase:
 
     def __init__(self, idx, env_config, controller_config):
         self.runner_handle = idx
@@ -32,6 +31,9 @@ class DreamerWorker:
             return self.done[handle] == 0
         
         elif self.env_type == Env.MAMUJOCO:
+            return self.done[handle] == 0
+        
+        elif self.env_type == Env.BIDEXHANDS:
             return self.done[handle] == 0
 
         else:
@@ -105,113 +107,116 @@ class DreamerWorker:
         else:
             return steps_done < self.env.max_time_steps
 
-    def run(self, dreamer_params):
+    def run(self, dreamer_params, controller=None):
+        original_controller = self.controller
+        if controller is not None:
+            self.controller = controller
         self.controller.receive_params(dreamer_params)
 
-        if self.env_type == Env.STARCRAFT:
-            state, shared_obs, _ = self.env.reset()
-            state = self._wrap(state)
-
-        elif self.env_type == Env.SMACv2:
-            state, shared_obs, _ = self.env.reset()
-            state = self._wrap(state)
-
-        elif self.env_type == Env.PETTINGZOO:
-            state, shared_obs, _ = self.env.reset()
-            state = self._wrap(state)
-
-        elif self.env_type == Env.GRF:
-            state, shared_obs, _ = self.env.reset()
-            state = self._wrap(state)
-
-        elif self.env_type == Env.MAMUJOCO:
-            state, shared_obs, _ = self.env.reset()
-            state = self._wrap(state)
-
-        else:
-            raise NotImplementedError(f'Currently we donot support {Env.MAMUJOCO} env.')
-        
-        # import ipdb; ipdb.set_trace()
-        shared_obs = torch.stack(self.unwrap(self._wrap(shared_obs)), dim=0).unsqueeze(0)
-
-        steps_done = 0
-        self.done = defaultdict(lambda: False)
-
-        rewards_list = []
-        info_list = []
-
-        while True:
-            steps_done += 1
-            actions, obs, fakes, av_actions, ent = self._select_actions(state, shared_obs)
+        try:
             if self.env_type == Env.STARCRAFT:
-                next_state, next_shared_obs, reward, done, info = self.env.step([action.argmax() for i, action in enumerate(actions)])
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
 
             elif self.env_type == Env.SMACv2:
-                next_state, next_shared_obs, reward, done, info, _ = self.env.step([action.argmax() for i, action in enumerate(actions)])
-                rewards_list.append(np.array(self.unwrap(reward)))
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
 
             elif self.env_type == Env.PETTINGZOO:
-                next_state, next_shared_obs, reward, done, info, _ = self.env.step(actions)
-                rewards_list.append(np.array(self.unwrap(reward)))
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
 
             elif self.env_type == Env.GRF:
-                next_state, next_shared_obs, reward, done, info, _ = self.env.step([action.argmax().item() for i, action in enumerate(actions)])
-                info_list.append(info)
-            
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
+
             elif self.env_type == Env.MAMUJOCO:
-                next_state, next_shared_obs, reward, done, info, _ = self.env.step(actions)
-                rewards_list.append(np.array(self.unwrap(reward)))
-                info_list.append(info)
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
+            
+            elif self.env_type == Env.BIDEXHANDS:
+                state, shared_obs, _ = self.env.reset()
+                state = self._wrap(state)
 
             else:
-                raise NotImplementedError(f"{self.env_type} is currently not supported.")
+                raise NotImplementedError(f"Currently we do not support {self.env_type} env.")
+            
+            shared_obs = torch.stack(self.unwrap(self._wrap(shared_obs)), dim=0).unsqueeze(0)
 
-            next_state, reward, done = self._wrap(deepcopy(next_state)), self._wrap(deepcopy(reward)), self._wrap(deepcopy(done))
-            next_shared_obs = torch.stack(self.unwrap(self._wrap(deepcopy(next_shared_obs))), dim=0).unsqueeze(0)
-            self.done = done
-            self.controller.update_buffer({"action": actions, "observation": obs, "shared_obs": shared_obs,
-                                           "reward": self.augment(reward), "done": self.augment(done), "fake": fakes,
-                                           "avail_action": av_actions,
-                                           "entropy": ent, # newly added
-                                           "next_shared_obs": next_shared_obs, })
+            steps_done = 0
+            self.done = defaultdict(lambda: False)
 
-            state = next_state
-            shared_obs = next_shared_obs
-            if all([done[key] == 1 for key in range(self.env.n_agents)]):
-                #### 这部分加入吸收态，可以等按照iris原来的data设置然后跑出实验结果后，再说
-                # if self._check_termination(info, steps_done):  # 只有当episode limit不出现才会进入吸收态循环
-                #     obs = torch.cat([self.get_absorbing_state() for i in range(self.env.n_agents)]).unsqueeze(0)
-                #     actions = torch.zeros(1, self.env.n_agents, actions.shape[-1])
-                #     index = torch.randint(0, actions.shape[-1], actions.shape[:-1], device=actions.device)
-                #     actions.scatter_(2, index.unsqueeze(-1), 1.)
-                #     items = {"observation": obs,
-                #              "action": actions,
-                #              "reward": torch.zeros(1, self.env.n_agents, 1),
-                #              "fake": torch.ones(1, self.env.n_agents, 1),
-                #              "done": torch.ones(1, self.env.n_agents, 1),
-                #              "avail_action": torch.ones_like(actions) if self.env_type == Env.STARCRAFT else None}
-                #     self.controller.update_buffer(items)
-                #     self.controller.update_buffer(items)
+            rewards_list = []
+            info_list = []
 
-                break
+            while True:
+                steps_done += 1
+                actions, obs, fakes, av_actions, ent = self._select_actions(state, shared_obs)
+                if self.env_type == Env.STARCRAFT:
+                    next_state, next_shared_obs, reward, done, info = self.env.step([action.argmax() for i, action in enumerate(actions)])
 
-        if self.env_type == Env.STARCRAFT or self.env_type == Env.SMACv2:
-            reward = 1. if 'battle_won' in info and info['battle_won'] else 0.
-        
-        elif self.env_type == Env.PETTINGZOO:
-            rew_per_step = np.mean(rewards_list)
-            reward = rew_per_step
+                elif self.env_type == Env.SMACv2:
+                    next_state, next_shared_obs, reward, done, info, _ = self.env.step([action.argmax() for i, action in enumerate(actions)])
+                    rewards_list.append(np.array(self.unwrap(reward)))
 
-        elif self.env_type == Env.GRF:
-            reward = self.check_score(info_list)
+                elif self.env_type == Env.PETTINGZOO:
+                    next_state, next_shared_obs, reward, done, info, _ = self.env.step(actions)
+                    rewards_list.append(np.array(self.unwrap(reward)))
 
-        elif self.env_type == Env.MAMUJOCO:
-            rew_per_step = np.mean(rewards_list)
-            reward = rew_per_step
-        
-        return self.controller.dispatch_buffer(), {"idx": self.runner_handle,
-                                                   "reward": reward,
-                                                   "steps_done": steps_done}
+                elif self.env_type == Env.GRF:
+                    next_state, next_shared_obs, reward, done, info, _ = self.env.step([action.argmax().item() for i, action in enumerate(actions)])
+                    info_list.append(info)
+                
+                elif self.env_type == Env.MAMUJOCO:
+                    next_state, next_shared_obs, reward, done, info, _ = self.env.step(actions)
+                    rewards_list.append(np.array(self.unwrap(reward)))
+                    info_list.append(info)
+                
+                elif self.env_type == Env.BIDEXHANDS:
+                    next_state, next_shared_obs, reward, done, info, _ = self.env.step(actions)
+                    rewards_list.append(np.array(self.unwrap(reward)))
+                    info_list.append(info)
+
+                else:
+                    raise NotImplementedError(f"{self.env_type} is currently not supported.")
+
+                next_state, reward, done = self._wrap(deepcopy(next_state)), self._wrap(deepcopy(reward)), self._wrap(deepcopy(done))
+                next_shared_obs = torch.stack(self.unwrap(self._wrap(deepcopy(next_shared_obs))), dim=0).unsqueeze(0)
+                self.done = done
+                self.controller.update_buffer({"action": actions, "observation": obs, "shared_obs": shared_obs,
+                                               "reward": self.augment(reward), "done": self.augment(done), "fake": fakes,
+                                               "avail_action": av_actions,
+                                               "entropy": ent,
+                                               "next_shared_obs": next_shared_obs, })
+
+                state = next_state
+                shared_obs = next_shared_obs
+                if all([done[key] == 1 for key in range(self.env.n_agents)]):
+                    break
+
+            if self.env_type == Env.STARCRAFT or self.env_type == Env.SMACv2:
+                reward = 1. if 'battle_won' in info and info['battle_won'] else 0.
+            
+            elif self.env_type == Env.PETTINGZOO:
+                rew_per_step = np.mean(rewards_list)
+                reward = rew_per_step
+
+            elif self.env_type == Env.GRF:
+                reward = self.check_score(info_list)
+
+            elif self.env_type == Env.MAMUJOCO:
+                rew_per_step = np.mean(rewards_list)
+                reward = rew_per_step
+
+            elif self.env_type == Env.BIDEXHANDS:
+                rew_per_step = np.mean(rewards_list)
+                reward = rew_per_step
+            
+            return self.controller.dispatch_buffer(), {"idx": self.runner_handle,
+                                                       "reward": reward,
+                                                       "steps_done": steps_done}
+        finally:
+            self.controller = original_controller
     
     def check_score(self, info_list):
         score_reward = 0.
@@ -220,3 +225,8 @@ class DreamerWorker:
             score_reward += info[0]['score_reward']
         
         return score_reward
+
+
+@ray.remote
+class DreamerWorker(DreamerWorkerBase):
+    pass

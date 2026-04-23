@@ -7,6 +7,7 @@ class Env(str, Enum):
     PETTINGZOO = "pettingzoo"
     GRF = "football"
     MAMUJOCO = "mamujoco"
+    BIDEXHANDS = "bidexhands"
     SMACv2 = "SMACv2"
 
 RANDOM_SEED = 23
