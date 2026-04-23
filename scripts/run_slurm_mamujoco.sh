@@ -1,60 +1,170 @@
-# set -x
-# PARTITION=${PARTITION:-"optimal"}
-# GPUS_PER_NODE=${GPUS_PER_NODE:-1}
-# export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+# !/usr/bin/env bash
+# set -euo pipefail
 
-# seeds=(
-#     1 2 3 4
+# export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
+
+# MODE="${MODE:-online}"
+# STEPS="${STEPS:-100000}"
+# SEEDS="${SEEDS:-0 1 2 3}"
+# TASKS=(
+#   "ShadowHandBottleCap"
+#   "ShadowHandDoorOpenInward"
+#   "ShadowHandDoorOpenOutward"
+#   "ShadowHandPen"
 # )
 
-# # HalfCheetah-v2
-# env="mamujoco"
-# map_name="Ant-v2"   # Ant-v2
-# agent_conf="4x2"            # 4x2
-# steps=1000000
-
-# for seed in "${seeds[@]}"; do
-#     date_dir=$(date "+%Y-%m-%d")
-#     cur_date=$(date "+%H-%M-%S")
-#     OUTPUT_DIR=training-runs/$date_dir
-
-#     # log_name=$(echo "$map_name" | awk -F'_' '{print $(NF-2) "-" $(NF-1) "-" $NF}')
-#     log_name="$map_name-$agent_conf-seed_$seed"
-#     echo $log_name
-#     note=
-
-#     mkdir -p $OUTPUT_DIR
-
-#     sbatch -p ${PARTITION} \
-#     -J ${log_name}${note:+-$note} \
-#     -N 1 \
-#     -n 6 \
-#     -o ${OUTPUT_DIR}/${cur_date}-${log_name}${note:+-$note}-%j.out \
-#     --gres=gpu:${GPUS_PER_NODE} \
-#     --wrap="python train.py \
-#             --n_workers 1 \
-#             --env $env \
-#             --env_name $map_name \
-#             --policy_class gaussian \
-#             --seed $seed \
-#             --agent_conf $agent_conf \
-#             --steps $steps \
-#             --mode offline \
-#             --temperature 1.0 \
-#             --sample_temp 20 \
-#             --state_decoder_type 1 \
-#             --ce_for_cont --use_tensorboard"
+# for seed in ${SEEDS}; do
+#   for task in "${TASKS[@]}"; do
+#     echo "Running DIMA on bidexhands/${task} with seed ${seed} for ${STEPS} steps"
+#     python3 train.py \
+#       --env bidexhands \
+#       --env_name "${task}" \
+#       --policy_class gaussian \
+#       --seed "${seed}" \
+#       --steps "${STEPS}" \
+#       --mode "${MODE}"
+#   done
 # done
 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 0 --steps 100000 --mode online  
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 2x4 --seed 0 --steps 100000 --mode online 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 0 --steps 100000 --mode offline  
 
-#  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 0 --steps 100000 --mode online --sim_device cpu --pipeline cpu
-#  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 0 --steps 100000 --mode online
-#  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 0 --steps 100000 --mode online
-#  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandPen --seed 0 --steps 100000 --mode online
+# CUDA_VISIBLE_DEVICES=1 /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --seed 0 --agent_conf 2x3 --steps 100000 --mode offline --use_mamba --use_harmony --mamba_d_state 16 --mamba_d_model 256 --mamba_n_layers 3 --mamba_expand 2 --mamba_d_conv 3 --rec_emb_lr_mult 2 --backend jax ##train each 200 #10k step warmup #1000 ac first update # ac epoch 10
+
+declare -a scenarios=(
+  "Ant-v2 2x4"
+  "Ant-v2 4x2"
+  "HalfCheetah-v2 2x3"
+  "HalfCheetah-v2 3x2"
+  "HalfCheetah-v2 6x1"
+  "Walker2d-v2 2x3"
+  "Walker2d-v2 3x2"
+)
+TASKS=(
+  "ShadowHandBottleCap"
+  "ShadowHandDoorOpenInward"
+  "ShadowHandDoorOpenOutward"
+  "ShadowHandPen"
+)
+
+is_cuda_python_running() {
+  local cuda_id="$1"
+  local pid
+
+  for pid in $(pgrep -x "python3|pt_main_thread"); do
+    if tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep -qx "CUDA_VISIBLE_DEVICES=${cuda_id}"; then
+      if ps -p "$pid" -o args= 2>/dev/null | grep -q "train.py"; then
+        return 0
+      fi
+    fi
+  done
+
+  return 1
+}
+
+submit_job() {
+  local -a cmd=("$@")
+  local found_available
+
+  while true; do
+    found_available=0
+    for cuda_id in 0 1 2 3; do
+      if ! is_cuda_python_running "$cuda_id"; then
+        echo "cuda:${cuda_id} is availible"
+        CUDA_VISIBLE_DEVICES=${cuda_id} nohup "${cmd[@]}" > "cuda${cuda_id}.log" 2>&1 &
+        found_available=1
+        sleep 20
+        break
+      fi
+    done
+
+    if [ "$found_available" -eq 1 ]; then
+      break
+    fi
+
+    sleep 5
+  done
+}
+
+SEEDS="${SEEDS:-0 1 2 3}"
+
+
+
+
+# conda activate py38
+
+# for seed in ${SEEDS}; do
+#   for task in "${TASKS[@]}"; do
+#     echo "Running DIMA on bidexhands/${task} with seed ${seed} for 100000 steps"
+#     # submit_job /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name "${task}" --seed "${seed}" --steps 100000 --mode online  
+#   done
+# done
+
+for seed in ${SEEDS}; do
+  for task in "${TASKS[@]}"; do
+    echo "Running DIMA on bidexhands/${task} with seed ${seed} for 100000 steps"
+    submit_job /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name "${task}" --seed "${seed}" --steps 100000 --mode online
+    # CUDA_VISIBLE_DEVICES=${seed} nohup /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ${task} --seed ${seed} --steps 100000 --mode online  --sim_device cpu --pipeline cpu > "bidexhands_${task}_seed${seed}.log" 2>&1 &
+  done
+done
+CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 0 --steps 100000 --mode online --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 0 --steps 100000 --mode online --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 0 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandPen --seed 0 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+
+CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 1 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 1 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 1 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandPen --seed 1 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+
+CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 2 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 2 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 2 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandPen --seed 2 --steps 100000 --mode online  --sim_device cpu --pipeline cpu
+
+CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 3 --steps 100000 --mode online  
+CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 3 --steps 100000 --mode online  
+CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 3 --steps 100000 --mode online  
+CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandPen --seed 3 --steps 100000 --mode online  
+
+# /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 2 --steps 100000 --mode online  
+# /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenOutward --seed 3 --steps 100000 --mode online  
+
+for seed in ${SEEDS}; do
+  for scenario in "${scenarios[@]}"; do
+    read -r env_name agent_conf <<< "$scenario"
+    echo "Running DIMA on mamujoco/${env_name} with seed ${seed} and agent_conf ${agent_conf}"
+    submit_job /usr/bin/python3 train.py --env mamujoco --env_name "${env_name}" --agent_conf "${agent_conf}" --seed "${seed}" --steps 100000 --mode online
+  done
+done
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online  
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online   
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 0 --steps 100000 --mode online   
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online   
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online  
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 2x4 --seed 0 --steps 100000 --mode online 
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 3 --steps 100000 --mode online  
+
+# /root/miniconda3/envs/dima/bin/python
+# /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode offline  
+
+# CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 0 --steps 100000 --mode online 
+# CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 3 --steps 100000 --mode online  
+# CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 3 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=0 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 1 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 3x2 --seed 1 --steps 100000 --mode online  
+# CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 1 --steps 100000 --mode online  
+
+
+# CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 3 --steps 100000 --mode online  
+# CUDA_VISIBLE_DEVICES=1 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 1 --steps 100000 --mode online  
+# CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 1 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 1 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Ant-v2 --agent_conf 2x4 --seed 1 --steps 100000 --mode online 
+# CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 2 --steps 100000 --mode online  
+
+
+# CUDA_VISIBLE_DEVICES=2 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 2 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 2 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 2 --steps 100000 --mode online   
+# CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 3x2 --seed 2 --steps 100000 --mode online  
+# CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Ant-v2 --agent_conf 2x4 --seed 2 --steps 100000 --mode online 
+# CUDA_VISIBLE_DEVICES=3 /root/miniconda3/envs/dima/bin/python train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 2 --steps 100000 --mode online  

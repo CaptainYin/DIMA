@@ -3,7 +3,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-
+import matplotlib
+matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
 import argparse
 import os
 import random
