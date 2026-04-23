@@ -52,7 +52,7 @@
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online 
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 2x4 --seed 0 --steps 100000 --mode online 
-# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 0 --steps 100000 --mode online  
+# submit_job /usr/bin/python3 train.py --env mamujoco --env_name Ant-v2 --agent_conf 4x2 --seed 0 --steps 100000 --mode offline  
 
 #  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandBottleCap --seed 0 --steps 100000 --mode online --sim_device cpu --pipeline cpu
 #  /root/miniconda3/envs/py38/bin/python3 train.py --env bidexhands --env_name ShadowHandDoorOpenInward --seed 0 --steps 100000 --mode online

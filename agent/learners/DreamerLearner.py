@@ -478,10 +478,10 @@ class DreamerLearner:
         self.rew_end_model.eval()
 
         ## train actor_critic
-        if self.train_count == 1: #yhq
+        if self.train_count == 10: #yhq
             print('Start training actor & critic...')
 
-        if self.train_count > 0:
+        if self.train_count > 9:
             to_log = []
 
             pbar = tqdm(range(self.config.EPOCHS if self.cur_wandb_epoch > 0 else self.config.ac_steps_first_epoch),
