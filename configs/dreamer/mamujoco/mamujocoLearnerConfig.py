@@ -1,6 +1,4 @@
 from agent.learners.DreamerLearner import DreamerLearner
-# from agent.learners.DreamerLearnerjax import DreamerLearner #only diffusion_jax
-# from agent.learners.DreamerLearnerjax1 import DreamerLearner #diffusion_jax and rew_end_model_jax
 from configs.dreamer.mamujoco.mamujocoAgentConfig import MAMujocoDreamerConfig #
 
 

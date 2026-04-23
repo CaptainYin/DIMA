@@ -1,9 +1,9 @@
 from configs.Config import Config
-from env.starcraft.StarCraft import StarCraft
+# from env.starcraft.StarCraft import StarCraft
 from env.pettingzoo.mpe_env import PettingZooMPEEnv
 from env.football.Football import Football
 from env.mamujoco.multiagent_mujoco.mujoco_multi import MujocoMulti
-from env.smacv2.smacv2_env import SMACv2Env
+# from env.smacv2.smacv2_env import SMACv2Env
 
 from configs.EnvCurriculum import EnvCurriculum, EnvCurriculumSample, EnvCurriculumPrioritizedSample
 

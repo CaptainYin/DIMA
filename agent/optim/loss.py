@@ -13,8 +13,8 @@ from utils import symexp
 
 from agent.coroutines.env_loop import rollout_policy_with_env, rollout_policy_with_env_wo_reset
 from agent.world_models.world_model_env import WorldModelEnv
-from agent.world_models.world_model_envjax1 import WorldModelEnv as  WorldModelEnvJax
-from agent.world_models.world_model_envjax import WorldModelEnv as  WorldModelEnvJax1
+# from agent.world_models.world_model_envjax1 import WorldModelEnv as  WorldModelEnvJax
+# from agent.world_models.world_model_envjax import WorldModelEnv as  WorldModelEnvJax1
 
 # import ipdb
 

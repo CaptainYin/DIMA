@@ -1,5 +1,4 @@
-# from agent.learners.DreamerLearner import DreamerLearner
-from agent.learners.DreamerLearnerjax import DreamerLearner
+from agent.learners.DreamerLearner import DreamerLearner
 from configs.dreamer.DreamerAgentConfig import DreamerConfig
 
 

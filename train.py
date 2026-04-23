@@ -11,15 +11,16 @@ from pathlib import Path
 os.environ['PYTHONWARNINGS'] = 'ignore::UserWarning,ignore::FutureWarning'
 from agent.runners.DreamerRunner import DreamerRunner
 from configs import Experiment # , SimpleObservationConfig, NearRewardConfig, DeadlockPunishmentConfig, RewardsComposerConfig
-from configs.EnvConfigs import EnvCurriculumConfig, StarCraftConfig, PettingZooConfig, FootballConfig, MAMujocoConfig, SMACv2Config
+from configs.EnvConfigs import EnvCurriculumConfig, PettingZooConfig, FootballConfig, MAMujocoConfig
+# SMACv2Config,StarCraftConfig
 
 
 from configs.dreamer.DreamerControllerConfig import DreamerControllerConfig
 from configs.dreamer.DreamerLearnerConfig import DreamerLearnerConfig
 
 # for SMACv2
-from configs.dreamer.smacv2.smacv2LearnerConfig import Smacv2DreamerLearnerConfig
-from configs.dreamer.smacv2.smacv2ControllerConfig import Smacv2DreamerControllerConfig
+# from configs.dreamer.smacv2.smacv2LearnerConfig import Smacv2DreamerLearnerConfig
+# from configs.dreamer.smacv2.smacv2ControllerConfig import Smacv2DreamerControllerConfig
 
 # for MPE
 from configs.dreamer.mpe.MpeLearnerConfig import MPEDreamerLearnerConfig
@@ -47,14 +48,14 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--env', type=str, default="flatland", help='Flatland or SMAC env')
     parser.add_argument('--env_name', type=str, default="5_agents", help='Specific setting')
-    parser.add_argument('--policy_class', type=str, required=True)
+    parser.add_argument('--policy_class', type=str, default='beta', help='gaussian or beta')
 
     # specialized arg for MAMujoco
     parser.add_argument('--agent_conf', type=str, default=None)
     # specialized arg for MPE
     parser.add_argument('--enable_mpe_disc', action='store_true')
 
-    parser.add_argument('--n_workers', type=int, default=2, help='Number of workers')
+    parser.add_argument('--n_workers', type=int, default=1, help='Number of workers')
     parser.add_argument('--seed', type=int, default=1, help='Number of workers')
     parser.add_argument('--steps', type=int, default=1e6, help='Number of workers')
     parser.add_argument('--mode', type=str, default='disabled')
