@@ -276,36 +276,40 @@ if __name__ == "__main__":
     ## t -> policy sample temperature; s -> seed; i -> sample interval; H -> imagination horizon
     ## o1 -> transformer based pcont NLL prediction, end threshold is 0.7
     if args.env == Env.MAMUJOCO:
-        run_name = f"({current_date_string}) raw_H{configs['learner_config'].horizon}_s{RANDOM_SEED}_i{configs['learner_config'].N_SAMPLES}_{args.policy_class}_gamma{configs['learner_config'].GAMMA}"
+        # run_name = f"({current_date_string}) raw_H{configs['learner_config'].horizon}_s{RANDOM_SEED}_i{configs['learner_config'].N_SAMPLES}_{args.policy_class}_gamma{configs['learner_config'].GAMMA}"
+        run_name = f"DIMA_s{args.seed}_{args.env_name}"
+        if args.agent_conf is not None:
+            run_name += f"_{args.agent_conf}"
     else:
         run_name = f"({current_date_string}) raw_H{configs['learner_config'].horizon}_t{args.temperature}_s{RANDOM_SEED}_i{configs['learner_config'].N_SAMPLES}_{args.policy_class}_gamma{configs['learner_config'].GAMMA}"
 
-    run_name += f"_DecObs_original"
-    run_name += f"_{configs['learner_config'].vq_type}"
+    # run_name += f"_DecObs_original"
+    # run_name += f"_{configs['learner_config'].vq_type}"
     # run_name += f"_o4"
 
     # EC denotes entropy coefficient
-    job_type = f"{args.policy_class}_gamma{configs['learner_config'].GAMMA}_EC{configs['learner_config'].ENTROPY}"
-    if configs['learner_config'].critic_dist_config['loss_type'] != 'regression':
-        job_type += f"_{configs['learner_config'].critic_dist_config['loss_type']}{configs['learner_config'].critic_dist_config['bins']}"
+    job_type='DIMA'
+    # job_type = f"{args.policy_class}_gamma{configs['learner_config'].GAMMA}_EC{configs['learner_config'].ENTROPY}"
+    # if configs['learner_config'].critic_dist_config['loss_type'] != 'regression':
+    #     job_type += f"_{configs['learner_config'].critic_dist_config['loss_type']}{configs['learner_config'].critic_dist_config['bins']}"
 
-    else:
-        job_type += f"_{configs['learner_config'].critic_dist_config['loss_type']}_Tau{configs['learner_config'].tau}"
+    # else:
+    #     job_type += f"_{configs['learner_config'].critic_dist_config['loss_type']}_Tau{configs['learner_config'].tau}"
     
     # DN denotes Denoiser max grad norm
     # job_type += f"_DN{configs['learner_config'].denoiser_max_grad_norm}"
 
     # w/o_VN denotes no usage of value normalization
-    if configs['learner_config'].use_valuenorm:
-        job_type += f"_w/VN"
+    # if configs['learner_config'].use_valuenorm:
+    #     job_type += f"_w/VN"
     
-    else:
-        job_type += f"_w/o_VN"
+    # else:
+    #     job_type += f"_w/o_VN"
 
-    if configs['learner_config'].compute_end_in_TD:
-        job_type += f"_w/end"
-    else:
-        job_type += f"_w/o_end"
+    # if configs['learner_config'].compute_end_in_TD:
+    #     job_type += f"_w/end"
+    # else:
+    #     job_type += f"_w/o_end"
 
     global wandb
     import wandb
