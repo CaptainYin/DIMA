@@ -11,7 +11,7 @@ class DreamerLearnerConfig(DreamerConfig):
         self.VALUE_LR = 5e-4  # 5e-4
         self.CAPACITY = 250000
         self.MIN_BUFFER_SIZE = 5000 # 500
-        self.MODEL_EPOCHS = 200 # 60
+        # self.MODEL_EPOCHS = 200 # 60
         self.WM_EPOCHS = 200  # 200
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 30 # 40; 27m bs should be 10, agents_num ~ 10 should be 20
@@ -70,7 +70,7 @@ class DreamerLearnerConfig(DreamerConfig):
 
         ### World model env params
         self.ac_batch_size = 600 # 32
-        self.update_manner = "REINFORCE" # "REINFORCE" | "PPO"
+        # self.update_manner = "REINFORCE" # "REINFORCE" | "PPO"
         self.ac_steps_first_epoch = 5 # 250 # 5000
         self.ac_opt_cfg = {
             'lr': 0.0001,

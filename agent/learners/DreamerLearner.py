@@ -170,7 +170,7 @@ class DreamerLearner:
 
         self.num_batch_train = CommonTools(0, 0, 0, 0)
 
-        self.update_manner = self.config.update_manner
+        # self.update_manner = self.config.update_manner
         if not config.CONTINUOUS_ACTION and self.env_type == Env.STARCRAFT:
             initialize_weights(self.actor)
             # initialize_weights(self.critic, mode='xavier')

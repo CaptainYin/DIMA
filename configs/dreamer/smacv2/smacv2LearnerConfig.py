@@ -31,7 +31,7 @@ class Smacv2DreamerLearnerConfig(Smacv2DreamerConfig):
         self.VALUE_LR = 5e-4  # 5e-4
         self.CAPACITY = 250000
         self.MIN_BUFFER_SIZE = 500 # 500
-        self.MODEL_EPOCHS = 100 # 60
+        # self.MODEL_EPOCHS = 100 # 60
         self.WM_EPOCHS = 200  # 200
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 40 # 40; 27m bs should be 10, agents_num ~ 10 should be 20

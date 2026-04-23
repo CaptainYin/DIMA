@@ -31,8 +31,8 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.VALUE_LR = 5e-4  # 5e-4
         self.CAPACITY = 250000
         self.MIN_BUFFER_SIZE = 5000 # 500
-        self.MODEL_EPOCHS = 200 # 60
-        self.WM_EPOCHS = 200  # 200
+        # self.MODEL_EPOCHS = 200 # 60
+        self.WM_EPOCHS = 10  # 200 yhq
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 40 # 40; 27m bs should be 10, agents_num ~ 10 should be 20
         self.BATCH_SIZE = 30 # 40; 27m bs should be 8, agents_num ~ 10 should be 20
@@ -41,7 +41,7 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.SEQ_LENGTH = self.horizon
         
         self.N_SAMPLES = 200  # 1
-        self.EPOCHS = 5 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
+        self.EPOCHS = 4 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
 
         self.TARGET_UPDATE = 20  # 1
         self.clip_param = 0.1
@@ -105,7 +105,7 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.ema_update_every = 10
         self.denoiser_opt_mode = 'robodreamer'
         self.denoiser_max_grad_norm = 1.0 # 10.0
-        self.denoiser_steps_first_epoch = 200 # 10000
+        self.denoiser_steps_first_epoch = 10 #200 yhq # 10000
         self.denoiser_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
@@ -114,8 +114,8 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.denoiser_lr_warmup_steps = 100
 
         ### rew_end_model learning params
-        self.remodel_steps_first_epoch = 200   # 200  LSTM-based seems better at 60
-        self.remodel_steps = 200
+        self.remodel_steps_first_epoch = 10   # 200  yhq
+        self.remodel_steps = 10 #200 yhq
         self.rew_end_model_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
@@ -126,7 +126,7 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
 
         ### World model env params
         self.ac_batch_size = 600 # 32
-        self.update_manner = "REINFORCE" # "REINFORCE" | "PPO"
+        # self.update_manner = "REINFORCE" # "REINFORCE" | "PPO"
         self.ac_steps_first_epoch = 5 # 250 # 5000
         self.ac_opt_cfg = {
             'lr': 0.0001,
