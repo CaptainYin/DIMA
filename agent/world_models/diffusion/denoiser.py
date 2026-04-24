@@ -46,9 +46,6 @@ def zero_(params):
 	for p in params:
 		p.data.fill_(0)
 
-import pickle
-import jax
-import equinox as eqx
 class Denoiser(nn.Module):
     def __init__(self, cfg: DenoiserConfig,
                  num_agents: int = None,
@@ -156,7 +153,7 @@ class Denoiser(nn.Module):
         return d
     
     @torch.no_grad()
-    def denoise(self, noisy_next_obs: Tensor, sigma: Tensor, obs: Tensor, act: Tensor, act_mask: Tensor,key: jax.random.PRNGKey=None) -> Tensor:
+    def denoise(self, noisy_next_obs: Tensor, sigma: Tensor, obs: Tensor, act: Tensor, act_mask: Tensor, key=None) -> Tensor:
         cs = self.compute_conditioners(sigma)
         model_output = self.compute_model_output(noisy_next_obs, obs, act, cs, act_mask)
         denoised = self.wrap_model_output(noisy_next_obs, model_output, cs)

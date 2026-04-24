@@ -5,7 +5,6 @@ from einops import repeat
 import torch
 import torch.nn.functional as F
 from torch import Tensor
-import jax.random as jrandom
 from .denoiser import Denoiser
 
 
@@ -61,7 +60,7 @@ class DiffusionSampler:
         return agent_order
 
     @torch.no_grad()
-    def sample(self, prev_state: Tensor, prev_act: Tensor, key:jrandom.PRNGKey =None) -> Tuple[Tensor, List[Tensor]]:
+    def sample(self, prev_state: Tensor, prev_act: Tensor, key=None) -> Tuple[Tensor, List[Tensor]]:
         device = prev_state.device
         if prev_state.ndim == 4:   # (b, seq_length, num_agents, state_dim)
             prev_state = prev_state.mean(dim=2)
@@ -111,7 +110,7 @@ class DiffusionSampler:
         return x, trajectory
     
     @torch.no_grad()
-    def ensemble_sample(self, prev_obs: Tensor, prev_act: Tensor, key:jrandom.PRNGKey =None):
+    def ensemble_sample(self, prev_obs: Tensor, prev_act: Tensor, key=None):
         xs = []
         trajs = []
         ori_agent_order = self.cfg.agent_order
@@ -135,4 +134,3 @@ def build_sigmas(num_steps: int, sigma_min: float, sigma_max: float, rho: int, d
     l = torch.linspace(0, 1, num_steps, device=device)
     sigmas = (max_inv_rho + l * (min_inv_rho - max_inv_rho)) ** rho
     return torch.cat((sigmas, sigmas.new_zeros(1)))
-

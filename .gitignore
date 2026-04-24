@@ -1,4 +1,5 @@
 grf_replays
+remote_sync
 process_pkl.py
 debug_results
 test_results

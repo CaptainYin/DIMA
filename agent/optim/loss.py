@@ -1,7 +1,5 @@
 import numpy as np
 import torch
-import equinox as eqx
-import jax
 import wandb
 import torch.nn.functional as F
 
@@ -20,6 +18,14 @@ from agent.world_models.world_model_env import WorldModelEnv
 
 from termcolor import cprint
 from tb_logger import LOGGER
+
+
+def _is_equinox_module(module) -> bool:
+    try:
+        import equinox as eqx
+    except ImportError:
+        return False
+    return isinstance(module, eqx.Module)
 
 
 def model_loss(config, model, obs, action, av_action, reward, done, fake, last):
@@ -160,15 +166,17 @@ def mse_loss(e):
 
 ## diffusion world model rollout
 def rollout_diffusion_world_models(training_buffer, running_mean_std, state_decoder, denoiser, rew_end_model, actor, critic, config, env_type, jax_key=None, use_jax=False, **kwargs):
-    # Check if using JAX denoiser (default to True for this JAX learner file)
+    is_jax_denoiser = _is_equinox_module(denoiser)
+    is_jax_rew_end_model = _is_equinox_module(rew_end_model)
 
-    is_jax_denoiser = isinstance(denoiser, eqx.Module)
-    is_jax_rew_end_model = isinstance(rew_end_model, eqx.Module)
-    if jax_key is None:
-        jax_key = jax.random.PRNGKey(0)    
-    if is_jax_denoiser and not is_jax_rew_end_model:
-        # Using JAX denoiser - need jax_key
-        wm_env = WorldModelEnvJax(
+    if use_jax or is_jax_denoiser or is_jax_rew_end_model:
+        raise RuntimeError(
+            "Unexpected JAX world-model path in /project/DIMA. "
+            "This codebase should use the torch implementation for training."
+        )
+
+    with FreezeParameters([denoiser, critic]):
+        wm_env = WorldModelEnv(
             running_mean_std=running_mean_std,
             state_decoder=state_decoder,
             denoiser=denoiser,
@@ -176,7 +184,7 @@ def rollout_diffusion_world_models(training_buffer, running_mean_std, state_deco
             dataset=training_buffer,
             num_envs=config.ac_batch_size,
             cfg=config.worldmodel_env_cfg,
-            return_denoising_trajectory=False,
+            return_denoising_trajectory=True,
             mode='non-ensemble',
             use_stack_obs=config.use_stack,
             num_stack_obs=config.stack_obs_num,
@@ -184,47 +192,7 @@ def rollout_diffusion_world_models(training_buffer, running_mean_std, state_deco
             state_decoder_type=config.state_decoder_type,
             should_reset_with_dead=config.compute_end_in_TD,
             device=config.DEVICE,
-            jax_key=jax_key,
         )
-    elif  is_jax_denoiser and is_jax_rew_end_model:
-        wm_env = WorldModelEnvJax1(
-            running_mean_std=running_mean_std,
-            state_decoder=state_decoder,
-            denoiser=denoiser,
-            rew_end_model=rew_end_model,
-            dataset=training_buffer,
-            num_envs=config.ac_batch_size,
-            cfg=config.worldmodel_env_cfg,
-            return_denoising_trajectory=False,
-            mode='non-ensemble',
-            use_stack_obs=config.use_stack,
-            num_stack_obs=config.stack_obs_num,
-            env_type=env_type,
-            state_decoder_type=config.state_decoder_type,
-            should_reset_with_dead=config.compute_end_in_TD,
-            device=config.DEVICE,
-            jax_key=jax_key,
-        )
-    else:
-        # Using PyTorch denoiser
-        with FreezeParameters([denoiser, critic]):
-            wm_env = WorldModelEnv(
-                running_mean_std=running_mean_std,
-                state_decoder=state_decoder,
-                denoiser=denoiser,
-                rew_end_model=rew_end_model,
-                dataset=training_buffer,
-                num_envs=config.ac_batch_size,
-                cfg=config.worldmodel_env_cfg,
-                return_denoising_trajectory=True,
-                mode='non-ensemble',
-                use_stack_obs=config.use_stack,
-                num_stack_obs=config.stack_obs_num,
-                env_type=env_type,
-                state_decoder_type=config.state_decoder_type,
-                should_reset_with_dead=config.compute_end_in_TD,
-                device=config.DEVICE,
-            )
 
     if config.compute_end_in_TD:
         obs, shared_obs, act, rew, pcont, end, trunc, logits_act, val, val_bootstrap, av_actions, _ = rollout_policy_with_env(wm_env, actor, critic, config.horizon)

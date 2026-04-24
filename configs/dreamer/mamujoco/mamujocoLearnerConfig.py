@@ -32,7 +32,7 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.CAPACITY = 250000
         self.MIN_BUFFER_SIZE = 5000 # 500
         # self.MODEL_EPOCHS = 200 # 60
-        self.WM_EPOCHS = 200 #yhq
+        self.WM_EPOCHS = 2 #yhq 200
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 40 # 40; 27m bs should be 10, agents_num ~ 10 should be 20
         self.BATCH_SIZE = 30 # 40; 27m bs should be 8, agents_num ~ 10 should be 20
@@ -105,7 +105,7 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.ema_update_every = 10
         self.denoiser_opt_mode = 'robodreamer'
         self.denoiser_max_grad_norm = 1.0 # 10.0
-        self.denoiser_steps_first_epoch = 5000 #yhq # 10000
+        self.denoiser_steps_first_epoch = 1 #yhq # 5000 10000
         self.denoiser_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
@@ -114,8 +114,8 @@ class MAMujocoDreamerLearnerConfig(MAMujocoDreamerConfig):
         self.denoiser_lr_warmup_steps = 100
 
         ### rew_end_model learning params
-        self.remodel_steps_first_epoch = 200   # 200  yhq
-        self.remodel_steps = 200 #200 yhq
+        self.remodel_steps_first_epoch = 2   # 200  yhq
+        self.remodel_steps = 2 #200 yhq
         self.rew_end_model_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
