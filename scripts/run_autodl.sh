@@ -84,8 +84,8 @@ submit_job() {
   done
 }
 
-
-submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online  
+CUDA_VISIBLE_DEVICES=0 /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 10000 --mode offline 
+submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 2x3 --seed 0 --steps 10000 --mode offline  
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 3x2 --seed 0 --steps 100000 --mode online   
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name HalfCheetah-v2 --agent_conf 6x1 --seed 0 --steps 100000 --mode online   
 # submit_job /usr/bin/python3 train.py --env mamujoco --env_name Walker2d-v2 --agent_conf 2x3 --seed 0 --steps 100000 --mode online   
