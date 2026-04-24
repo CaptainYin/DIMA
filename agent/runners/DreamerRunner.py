@@ -180,12 +180,12 @@ class DreamerRunner:
             self.learner.step(rollout)
 
             ## save model
-            if (cur_steps - last_save_steps) > save_interval and save_mode == "interval":
+            if (cur_steps - last_save_steps) >= save_interval and save_mode == "interval":
                 self.learner.save(self.learner.config.RUN_DIR + f"/ckpt/model_{cur_steps // 1000}Ksteps.pth")
                 last_save_steps = cur_steps // save_interval * save_interval
 
             ## evaluation
-            if (cur_steps - last_eval_steps) > 1000:
+            if (cur_steps - last_eval_steps) >= 1000:
                 eval_win_rate, eval_returns, aver_eval_steps = self.server.evaluate(self.learner.params())
                 last_eval_steps = cur_steps // 1000 * 1000
                 
