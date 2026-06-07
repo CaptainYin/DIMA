@@ -40,4 +40,4 @@ class MPEDreamerConfig(DreamerConfig):
         self.use_stack = False
         self.stack_obs_num = 5
 
-        self.rew_end_model_type = 'rnn' # 'rnn' or 'transformer'
+        self.rew_end_model_type = 'transformer' # 'rnn' or 'transformer'

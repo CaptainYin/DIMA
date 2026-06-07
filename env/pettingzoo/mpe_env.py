@@ -3,6 +3,7 @@ import importlib
 import logging
 import numpy as np
 import supersuit as ss
+from configs.mpe_scenarios import normalize_mpe_scenario
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)
@@ -11,7 +12,7 @@ logging.getLogger().setLevel(logging.ERROR)
 class PettingZooMPEEnv:
     def __init__(self, scenario, seed, continuous_actions, **args):
         self.args = copy.deepcopy(args)
-        self.scenario = scenario
+        self.scenario = normalize_mpe_scenario(scenario)
         # del self.args["scenario"]
         self.discrete = not continuous_actions
         self.args["continuous_actions"] = continuous_actions

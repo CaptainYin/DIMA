@@ -275,7 +275,9 @@ class DreamerLearner:
         )
         return normed_state
 
-    def step(self, rollout):
+    def step(self, rollout, env_steps=None):
+        self.current_env_steps = env_steps
+        setattr(self.config, "logging_step", env_steps)
         if self.n_agents != rollout['action'].shape[-2]:
             self.n_agents = rollout['action'].shape[-2]
 
@@ -511,7 +513,7 @@ class DreamerLearner:
             self.actor.eval()
             self.critic.eval()
 
-        wandb_log(total_to_log, self.cur_wandb_epoch)
+        wandb_log(total_to_log, self.cur_wandb_epoch, steps=env_steps)
 
         for d in total_to_log:
             for k, v in d.items():
@@ -703,10 +705,14 @@ class DreamerLearner:
 
                 if not self.config.CONTINUOUS_ACTION:
                     loss = actor_loss(obs[idx], act[idx], av_actions[idx] if av_actions is not None else None,
-                                      logits_act[idx], adv[idx], self.actor, self.entropy, clip_param=self.config.clip_param)
+                                      logits_act[idx], adv[idx], self.actor, self.entropy,
+                                      clip_param=self.config.clip_param,
+                                      log_steps=getattr(self.config, "logging_step", None))
                 else:
                     loss = continuous_actor_loss(obs[idx], act[idx], None,
-                                                 logits_act[idx], adv[idx], self.actor, self.entropy, self.config.clip_param)
+                                                 logits_act[idx], adv[idx], self.actor, self.entropy,
+                                                 self.config.clip_param,
+                                                 log_steps=getattr(self.config, "logging_step", None))
                 
                 actor_grad_norm = self.apply_optimizer(self.actor_optimizer, self.actor, loss, self.config.GRAD_CLIP_POLICY)
                 self.entropy *= self.config.ENTROPY_ANNEALING

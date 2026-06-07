@@ -433,7 +433,9 @@ if __name__ == "__main__":
     if args.ce_for_cont:
         group_name += "_ce_for_cont"
 
-    if args.env in (Env.MAMUJOCO, Env.BIDEXHANDS):
+    if args.env == Env.PETTINGZOO:
+        run_name = f"DIMA_s{args.seed}_{args.env_name}"
+    elif args.env in (Env.MAMUJOCO, Env.BIDEXHANDS):
         run_name = f"DIMA_s{args.seed}_{args.env_name}"
         if args.agent_conf is not None:
             run_name += f"_{args.agent_conf}"
@@ -450,6 +452,8 @@ if __name__ == "__main__":
 
     if args.env == Env.MAMUJOCO:
         project_name = "mamujoco"
+    elif args.env == Env.PETTINGZOO:
+        project_name = "MPE"
     elif args.env == Env.BIDEXHANDS:
         project_name = "dexhands"
     else:

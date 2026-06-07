@@ -253,9 +253,20 @@ def count_parameters(model: nn.Module) -> int:
 
 
 Logs = List[Dict[str, float]]
-def wandb_log(logs: Logs, epoch: int):
+def _wandb_value(value):
+    if isinstance(value, torch.Tensor):
+        value = value.detach()
+        if value.numel() == 1:
+            return value.item()
+    return value
+
+
+def wandb_log(logs: Logs, epoch: int, steps: Optional[int] = None):
     for d in logs:
-        wandb.log({"epoch": epoch, **d})
+        payload = {"epoch": epoch, **{k: _wandb_value(v) for k, v in d.items()}}
+        if steps is not None:
+            payload["steps"] = int(steps)
+        wandb.log(payload)
 
 
 def load_mamba_model(config, ckpt_path):

@@ -20,6 +20,22 @@ from termcolor import cprint
 from tb_logger import LOGGER
 
 
+def _wandb_value(value):
+    if isinstance(value, torch.Tensor):
+        value = value.detach()
+        if value.numel() == 1:
+            return value.item()
+    return value
+
+
+def _wandb_log(data, config=None, log_steps=None):
+    payload = {key: _wandb_value(value) for key, value in data.items()}
+    steps = log_steps if log_steps is not None else getattr(config, "logging_step", None)
+    if steps is not None:
+        payload["steps"] = int(steps)
+    wandb.log(payload)
+
+
 def _is_equinox_module(module) -> bool:
     try:
         import equinox as eqx
@@ -55,9 +71,9 @@ def model_loss(config, model, obs, action, av_action, reward, done, fake, last):
 
     model_loss = div + reward_loss + dis_loss + reconstruction_loss + pcont_loss + av_action_loss
     if np.random.randint(20) == 4:
-        wandb.log({'Model/reward_loss': reward_loss, 'Model/div': div, 'Model/av_action_loss': av_action_loss,
-                   'Model/reconstruction_loss': reconstruction_loss, 'Model/info_loss': dis_loss,
-                   'Model/pcont_loss': pcont_loss})
+        _wandb_log({'Model/reward_loss': reward_loss, 'Model/div': div, 'Model/av_action_loss': av_action_loss,
+                    'Model/reconstruction_loss': reconstruction_loss, 'Model/info_loss': dis_loss,
+                    'Model/pcont_loss': pcont_loss}, config=config)
 
     return model_loss
 
@@ -88,9 +104,9 @@ def critic_rollout(model, critic, states, rew_states, actions, raw_states, confi
         imag_reward = imag_reward.reshape(actions.shape[:-1]).unsqueeze(-1).mean(-2, keepdim=True)[:-1]
         value = critic(states)
         discount_arr = model.pcont(rew_states).mean
-        wandb.log({'Value/Max reward': imag_reward.max(), 'Value/Min reward': imag_reward.min(),
-                   'Value/Reward': imag_reward.mean(), 'Value/Discount': discount_arr.mean(),
-                   'Value/Value': value.mean()})
+        _wandb_log({'Value/Max reward': imag_reward.max(), 'Value/Min reward': imag_reward.min(),
+                    'Value/Reward': imag_reward.mean(), 'Value/Discount': discount_arr.mean(),
+                    'Value/Value': value.mean()}, config=config)
     returns = compute_return(imag_reward, value[:-1], discount_arr, bootstrap=value[-1], lmbda=config.DISCOUNT_LAMBDA,
                              gamma=config.GAMMA)
     return returns
@@ -110,7 +126,7 @@ def calculate_next_reward(model, actions, states):
     return calculate_reward(model, imag_rew_feat)
 
 
-def actor_loss(imag_states, actions, av_actions, old_policy, advantage, actor, ent_weight, clip_param):
+def actor_loss(imag_states, actions, av_actions, old_policy, advantage, actor, ent_weight, clip_param, log_steps=None):
     _, new_policy = actor(imag_states)
     if av_actions is not None:
         new_policy[av_actions == 0] = -1e10
@@ -119,12 +135,12 @@ def actor_loss(imag_states, actions, av_actions, old_policy, advantage, actor, e
            F.log_softmax(old_policy, dim=-1).gather(2, actions)).exp()
     ppo_loss, ent_loss = calculate_ppo_loss(new_policy, rho, advantage, clip_param)
     if np.random.randint(10) == 9:
-        wandb.log({'Policy/Entropy': ent_loss.mean(), 'Policy/Mean action': actions.float().mean()})
+        _wandb_log({'Policy/Entropy': ent_loss.mean(), 'Policy/Mean action': actions.float().mean()}, log_steps=log_steps)
         # print(f'in function actor loss, entropy is {ent_loss.detach().mean().item()}')
     return (ppo_loss + ent_loss.unsqueeze(-1) * ent_weight).mean()
 
 ## update
-def continuous_actor_loss(imag_states, actions, av_actions, old_log_probs, advantage, actor, ent_weight, clip_param):
+def continuous_actor_loss(imag_states, actions, av_actions, old_log_probs, advantage, actor, ent_weight, clip_param, log_steps=None):
     action_log_probs, dist_entropy, _ = actor.evaluate_actions(imag_states, actions)
 
     imp_weights = torch.prod(
@@ -139,7 +155,7 @@ def continuous_actor_loss(imag_states, actions, av_actions, old_log_probs, advan
     actor_loss = policy_loss - dist_entropy * ent_weight
     # (policy_loss - dist_entropy * ent_weight).backward()
     if np.random.randint(10) == 9:
-        wandb.log({'Policy/Entropy': dist_entropy.detach().item(), 'Policy/Mean action': actions.detach().float().mean().item()})
+        _wandb_log({'Policy/Entropy': dist_entropy, 'Policy/Mean action': actions.float().mean()}, log_steps=log_steps)
         LOGGER.log_scalar_wo_step('Policy/Entropy', dist_entropy.detach().item())
         LOGGER.log_scalar_wo_step('Policy/Mean action', actions.detach().float().mean().item())
         # print(f'in function continuous actor loss, entropy is {dist_entropy.detach().item()}')

@@ -140,9 +140,18 @@ class DreamerRunner:
         steps = []
 
         wandb.define_metric("steps")
+        wandb.define_metric("win", step_metric="steps")
         wandb.define_metric("reward", step_metric="steps")
-        wandb.define_metric("eval_win_rate", step_metric="steps")
-        wandb.define_metric("eval_returns", step_metric="steps")
+        wandb.define_metric("rew_per_step", step_metric="steps")
+        wandb.define_metric("scores", step_metric="steps")
+        wandb.define_metric("returns", step_metric="steps")
+        wandb.define_metric("epi_length", step_metric="steps")
+        wandb.define_metric("eval_*", step_metric="steps")
+        wandb.define_metric("state_decoder/*", step_metric="steps")
+        wandb.define_metric("actor_critic/*", step_metric="steps")
+        wandb.define_metric("Model/*", step_metric="steps")
+        wandb.define_metric("Value/*", step_metric="steps")
+        wandb.define_metric("Policy/*", step_metric="steps")
 
         while True:
             # NOTE: array manager backend... mp
@@ -177,7 +186,7 @@ class DreamerRunner:
             LOGGER.log_scalar('metrics/returns', returns, cur_steps)
             LOGGER.log_scalar('metrics/epi_length', epi_length, cur_steps)
 
-            self.learner.step(rollout)
+            self.learner.step(rollout, env_steps=cur_steps)
 
             ## save model
             if (cur_steps - last_save_steps) >= save_interval and save_mode == "interval":
@@ -190,6 +199,8 @@ class DreamerRunner:
                 last_eval_steps = cur_steps // 1000 * 1000
                 
                 wandb.log({'eval_win_rate': eval_win_rate, "steps": cur_steps})
+                if self.env_type in [Env.MAMUJOCO, Env.PETTINGZOO, Env.BIDEXHANDS]:
+                    wandb.log({'eval_rew_per_step': eval_win_rate, "steps": cur_steps})
                 wandb.log({'eval_returns': eval_returns, "steps": cur_steps})
                 wandb.log({'eval_avg_epi_len': aver_eval_steps, "steps": cur_steps})
                 LOGGER.log_scalar('metrics/eval_win_rate', eval_win_rate, cur_steps)
