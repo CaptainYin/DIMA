@@ -187,7 +187,7 @@ def rollout_diffusion_world_models(training_buffer, running_mean_std, state_deco
 
     if use_jax or is_jax_denoiser or is_jax_rew_end_model:
         raise RuntimeError(
-            "Unexpected JAX world-model path in /project/DIMA. "
+            "Unexpected JAX world-model path in this DIMA checkout. "
             "This codebase should use the torch implementation for training."
         )
 

@@ -82,12 +82,13 @@ class SMACv2Env:
         self.env.close()
 
     def load_map_config(self, map_name):
-        base_path = osp.split(osp.split(osp.dirname(osp.abspath(__file__)))[0])[0]
+        repo_root = Path(__file__).resolve().parents[2]
+        workspace_root = repo_root.parent
         candidate_dirs = [
             os.getenv("SMACV2_MAP_CONFIG_DIR"),
-            Path(base_path) / "configs" / "envs_cfgs" / "smacv2_map_config",
-            Path("/project/HARL-main/harl/configs/envs_cfgs/smacv2_map_config"),
-            Path(f"{os.getenv('HOME')}/3rdApps/smacv2_map_config"),
+            repo_root / "configs" / "envs_cfgs" / "smacv2_map_config",
+            workspace_root / "HARL-main" / "harl" / "configs" / "envs_cfgs" / "smacv2_map_config",
+            Path.home() / "3rdApps" / "smacv2_map_config",
         ]
         map_config_path = None
         for candidate_dir in candidate_dirs:
