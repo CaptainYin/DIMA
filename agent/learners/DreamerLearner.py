@@ -434,7 +434,17 @@ class DreamerLearner:
                     desc=f"Training Function", file=sys.stdout, disable=not self.tqdm_vis)
         to_log = []
         for i in pbar:
-            samples = self.mamba_replay_buffer.sample_batch(bs=128, sl=self.config.horizon if self.rew_end_model.__class__ == TransRewEndModel else 20, mode='rew_end_model')
+            rew_end_sl = self.config.horizon if self.rew_end_model.__class__ == TransRewEndModel else 20
+            buffer_size = (
+                self.mamba_replay_buffer.capacity
+                if self.mamba_replay_buffer.full
+                else self.mamba_replay_buffer.size
+            )
+            available_sequences = max(0, buffer_size - rew_end_sl + 1)
+            rew_end_bs = min(128, available_sequences // rew_end_sl)
+            if rew_end_bs < 1:
+                break
+            samples = self.mamba_replay_buffer.sample_batch(bs=rew_end_bs, sl=rew_end_sl, mode='rew_end_model')
             samples = self._to_device(samples)
 
             samples['shared_obs'] = self.normalize_state(samples['shared_obs'].mean(2))

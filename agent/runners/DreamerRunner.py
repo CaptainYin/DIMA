@@ -141,11 +141,13 @@ class DreamerRunner:
 
         wandb.define_metric("steps")
         wandb.define_metric("win", step_metric="steps")
+        wandb.define_metric("incre_win_rate", step_metric="steps")
         wandb.define_metric("reward", step_metric="steps")
         wandb.define_metric("rew_per_step", step_metric="steps")
         wandb.define_metric("scores", step_metric="steps")
         wandb.define_metric("returns", step_metric="steps")
         wandb.define_metric("epi_length", step_metric="steps")
+        wandb.define_metric("average_episode_length", step_metric="steps")
         wandb.define_metric("eval_*", step_metric="steps")
         wandb.define_metric("state_decoder/*", step_metric="steps")
         wandb.define_metric("actor_critic/*", step_metric="steps")
@@ -166,10 +168,14 @@ class DreamerRunner:
 
             epi_length = info["steps_done"]
             returns = rollout["reward"].sum(0).mean()
+            rew_per_step = returns / max(epi_length, 1)
 
             if self.env_type == Env.STARCRAFT or self.env_type == Env.SMACv2:
-                wandb.log({'win': info["reward"], 'steps': cur_steps})
+                wandb.log({'win': info["reward"], 'incre_win_rate': info["reward"], 'steps': cur_steps})
+                wandb.log({'rew_per_step': rew_per_step, 'steps': cur_steps})
                 LOGGER.log_scalar('metrics/win', info["reward"], cur_steps)
+                LOGGER.log_scalar('metrics/incre_win_rate', info["reward"], cur_steps)
+                LOGGER.log_scalar('metrics/rew_per_step', rew_per_step, cur_steps)
                 print("Epi: %4s" % cur_episode, "steps: %5s" % (cur_steps), f"epi_len: {epi_length}", f'Win: {info["reward"]}', 'Returns: %.4f' % returns, f"Entropy: {ent_str}", sep=' | ')
             elif self.env_type in [Env.MAMUJOCO, Env.PETTINGZOO, Env.BIDEXHANDS]:
                 wandb.log({'rew_per_step': info["reward"], 'steps': cur_steps})
@@ -183,6 +189,7 @@ class DreamerRunner:
 
             wandb.log({'returns': returns, "steps": cur_steps})
             wandb.log({'epi_length': epi_length, "steps": cur_steps})
+            wandb.log({'average_episode_length': epi_length, "steps": cur_steps})
             LOGGER.log_scalar('metrics/returns', returns, cur_steps)
             LOGGER.log_scalar('metrics/epi_length', epi_length, cur_steps)
 
@@ -201,8 +208,11 @@ class DreamerRunner:
                 wandb.log({'eval_win_rate': eval_win_rate, "steps": cur_steps})
                 if self.env_type in [Env.MAMUJOCO, Env.PETTINGZOO, Env.BIDEXHANDS]:
                     wandb.log({'eval_rew_per_step': eval_win_rate, "steps": cur_steps})
+                elif self.env_type in [Env.STARCRAFT, Env.SMACv2]:
+                    wandb.log({'eval_rew_per_step': eval_returns / max(aver_eval_steps, 1), "steps": cur_steps})
                 wandb.log({'eval_returns': eval_returns, "steps": cur_steps})
                 wandb.log({'eval_avg_epi_len': aver_eval_steps, "steps": cur_steps})
+                wandb.log({'eval_average_episode_length': aver_eval_steps, "steps": cur_steps})
                 LOGGER.log_scalar('metrics/eval_win_rate', eval_win_rate, cur_steps)
                 LOGGER.log_scalar('metrics/eval_returns', eval_returns, cur_steps)
                 LOGGER.log_scalar('metrics/eval_avg_epi_len', aver_eval_steps, cur_steps)

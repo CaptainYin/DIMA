@@ -33,12 +33,15 @@ class Smacv2DreamerLearnerConfig(Smacv2DreamerConfig):
         self.MIN_BUFFER_SIZE = 500 # 500
         # self.MODEL_EPOCHS = 100 # 60
         self.WM_EPOCHS = 200  # 200
+        self.VAE_EPOCHS = 200
+        self.VAE_steps_first_epoch = 5000
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 40 # 40; 27m bs should be 10, agents_num ~ 10 should be 20
         self.BATCH_SIZE = 30 # 40; 27m bs should be 8, agents_num ~ 10 should be 20
         self.ac_batch_size = 600  # 600
         # self.SEQ_LENGTH = 20
-        self.SEQ_LENGTH = self.HORIZON
+        self.HORIZON = self.horizon
+        self.SEQ_LENGTH = self.horizon
         
         self.N_SAMPLES = 200  # 1
         self.EPOCHS = 5 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
@@ -77,6 +80,53 @@ class Smacv2DreamerLearnerConfig(Smacv2DreamerConfig):
 
         ## control whether average the predicted rewards
         self.critic_average_r = False
+        self.critic_dist_config = {
+            'symlog_transform': False,
+            'loss_type': 'regression',
+            'min_v': -10.,
+            'max_v': 10.,
+            'bins': 21,
+        }
+        self.tau = 0.5
+
+        ### Denoiser learning params
+        self.grad_acc_steps = 1
+        self.ema_decay = 0.995
+        self.ema_update_every = 10
+        self.denoiser_opt_mode = 'robodreamer'
+        self.denoiser_max_grad_norm = 1.0
+        self.denoiser_steps_first_epoch = 200
+        self.wm_steps_first_epoch = self.denoiser_steps_first_epoch
+        self.denoiser_opt_cfg = {
+            'lr': 0.0001,
+            'weight_decay': 0.01,
+            'eps': 1e-08,
+        }
+        self.denoiser_lr_warmup_steps = 100
+
+        ### rew_end_model learning params
+        self.remodel_steps_first_epoch = 60
+        self.remodel_steps = 60
+        self.rew_end_model_opt_cfg = {
+            'lr': 0.0001,
+            'weight_decay': 0.01,
+            'eps': 1e-08,
+        }
+        self.remodel_lr_warmup_steps = 100
+        self.remodel_max_grad_norm = 10.
+
+        ### World model env params
+        self.ac_batch_size = 600
+        self.ac_steps_first_epoch = 5
+        self.ac_opt_cfg = {
+            'lr': 0.0001,
+            'weight_decay': 0.01,
+            'eps': 1e-08,
+        }
+        self.ac_lr_warmup_steps = 100
+        self.ac_max_grad_norm = 10.
+        self.compute_end_in_TD = True
+        self.offline_epochs = 20
 
         ## discrete regression
         self.rewards_prediction_config = {

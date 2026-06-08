@@ -1,3 +1,7 @@
+import os
+
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
+
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -6,7 +10,6 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 import matplotlib
 matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
 import argparse
-import os
 import random
 import shutil
 from datetime import datetime
@@ -433,7 +436,7 @@ if __name__ == "__main__":
     if args.ce_for_cont:
         group_name += "_ce_for_cont"
 
-    if args.env == Env.PETTINGZOO:
+    if args.env in (Env.PETTINGZOO, Env.SMACv2):
         run_name = f"DIMA_s{args.seed}_{args.env_name}"
     elif args.env in (Env.MAMUJOCO, Env.BIDEXHANDS):
         run_name = f"DIMA_s{args.seed}_{args.env_name}"
@@ -454,6 +457,8 @@ if __name__ == "__main__":
         project_name = "mamujoco"
     elif args.env == Env.PETTINGZOO:
         project_name = "MPE"
+    elif args.env == Env.SMACv2:
+        project_name = "SMACv2"
     elif args.env == Env.BIDEXHANDS:
         project_name = "dexhands"
     else:
