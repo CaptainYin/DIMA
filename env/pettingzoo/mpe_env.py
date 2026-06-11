@@ -53,9 +53,10 @@ class PettingZooMPEEnv:
         return local_obs, global_state, rewards, dones, infos, available_actions
         """
         if self.discrete:
-            obs, rew, term, trunc, info = self.env.step(self.wrap(actions.flatten()))
+            env_actions = self.wrap_discrete_actions(actions)
         else:
-            obs, rew, term, trunc, info = self.env.step(self.wrap(actions))
+            env_actions = self.wrap(actions)
+        obs, rew, term, trunc, info = self.env.step(env_actions)
         self.cur_step += 1
         if self.cur_step == self.max_cycles:
             trunc = {agent: True for agent in self.agents}
@@ -110,6 +111,62 @@ class PettingZooMPEEnv:
         for i, agent in enumerate(self.agents):
             d[agent] = l[i]
         return d
+
+    def wrap_discrete_actions(self, actions):
+        action_ids = self._discrete_action_ids(actions)
+        return {agent: int(action_ids[i]) for i, agent in enumerate(self.agents)}
+
+    def _discrete_action_ids(self, actions):
+        action_array = self._to_numpy(actions)
+
+        while action_array.ndim > 2 and action_array.shape[0] == 1:
+            action_array = action_array[0]
+
+        if action_array.ndim == 2:
+            if action_array.shape[0] != self.n_agents:
+                raise ValueError(
+                    "Discrete MPE actions must have one row per agent; "
+                    f"got shape {action_array.shape} for {self.n_agents} agents."
+                )
+            if action_array.shape[1] == 1:
+                action_ids = action_array.reshape(self.n_agents)
+            else:
+                action_ids = action_array.argmax(axis=-1)
+        elif action_array.ndim == 1:
+            if action_array.size == self.n_agents:
+                action_ids = action_array
+            elif action_array.size == self.n_agents * self.n_actions:
+                action_ids = action_array.reshape(self.n_agents, self.n_actions).argmax(axis=-1)
+            else:
+                raise ValueError(
+                    "Discrete MPE actions must be integer IDs or one-hot rows; "
+                    f"got shape {action_array.shape} for {self.n_agents} agents and "
+                    f"{self.n_actions} actions."
+                )
+        else:
+            raise ValueError(
+                "Discrete MPE actions must be integer IDs or one-hot rows; "
+                f"got shape {action_array.shape}."
+            )
+
+        rounded = np.rint(action_ids)
+        if not np.allclose(action_ids, rounded):
+            raise ValueError(f"Discrete MPE action IDs must be integers; got {action_ids}.")
+
+        action_ids = rounded.astype(np.int64)
+        if np.any(action_ids < 0) or np.any(action_ids >= self.n_actions):
+            raise ValueError(
+                f"Discrete MPE action IDs must be in [0, {self.n_actions}); "
+                f"got {action_ids}."
+            )
+        return action_ids
+
+    def _to_numpy(self, actions):
+        if hasattr(actions, "detach"):
+            return actions.detach().cpu().numpy()
+        if isinstance(actions, (list, tuple)):
+            return np.asarray([self._to_numpy(action) for action in actions])
+        return np.asarray(actions)
     
     def wrap_with_id(self, l):
         d = {}

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 MPE_BENCHMARK_SCENARIOS = (
     "simple_spread",
+    "simple_reference",
+    "simple_speaker_listener",
     "simple_push",
     "simple_tag",
     "simple_adversary",
@@ -11,6 +13,10 @@ MPE_BENCHMARK_SCENARIOS = (
 MPE_SCENARIO_ALIASES = {
     "simple_spread": "simple_spread_v2",
     "simple_spread_v2": "simple_spread_v2",
+    "simple_reference": "simple_reference_v2",
+    "simple_reference_v2": "simple_reference_v2",
+    "simple_speaker_listener": "simple_speaker_listener_v3",
+    "simple_speaker_listener_v3": "simple_speaker_listener_v3",
     "simple_push": "simple_push_v2",
     "simple_push_v2": "simple_push_v2",
     "simple_tag": "simple_tag_v2",
