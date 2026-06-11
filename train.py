@@ -9,6 +9,8 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 import matplotlib
 matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
+import native_runtime
+native_runtime.prepare_train_process()
 import argparse
 import random
 import shutil
