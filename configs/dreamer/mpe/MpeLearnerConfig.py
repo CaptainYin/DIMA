@@ -36,12 +36,11 @@ class MPEDreamerLearnerConfig(MPEDreamerConfig):
         self.PPO_EPOCHS = 5
         self.MODEL_BATCH_SIZE = 40 # 40; 27m bs should be 10, agents_num ~ 10 should be 20
         self.BATCH_SIZE = 30 # 40; 27m bs should be 8, agents_num ~ 10 should be 20
-        self.ac_batch_size = 600  # 600
         # self.SEQ_LENGTH = 20
         self.SEQ_LENGTH = self.horizon
         
-        self.N_SAMPLES = 200  # 1
-        self.EPOCHS = 5 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
+        self.N_SAMPLES = 500  # 1
+        self.EPOCHS = 4 # 4; 27m epochs should be 20, agents_num ~ 10 should be 20
 
         self.TARGET_UPDATE = 20  # 1
         self.clip_param = 0.2
@@ -108,8 +107,8 @@ class MPEDreamerLearnerConfig(MPEDreamerConfig):
         self.denoiser_lr_warmup_steps = 100
 
         ### rew_end_model learning params
-        self.remodel_steps_first_epoch = 60   # 200  LSTM-based seems better at 60
-        self.remodel_steps = 60
+        self.remodel_steps_first_epoch = 200   # 200  LSTM-based seems better at 60
+        self.remodel_steps = 200
         self.rew_end_model_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
@@ -121,7 +120,7 @@ class MPEDreamerLearnerConfig(MPEDreamerConfig):
         ### World model env params
         self.ac_batch_size = 600 # 32
         # self.update_manner = "REINFORCE" # "REINFORCE" | "PPO"
-        self.ac_steps_first_epoch = 5 # 250 # 5000
+        self.ac_steps_first_epoch = 4 # 250 # 5000
         self.ac_opt_cfg = {
             'lr': 0.0001,
             'weight_decay': 0.01,
