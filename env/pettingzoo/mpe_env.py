@@ -1,9 +1,53 @@
 import copy
+from contextlib import contextmanager
 import importlib
 import logging
+import os
+
+
+def _headless_pygame_enabled():
+    return os.environ.get("DIMA_PETTINGZOO_RENDER", "").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _configure_headless_pygame():
+    os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+    if _headless_pygame_enabled():
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        os.environ["SDL_AUDIODRIVER"] = "dummy"
+
+
+_configure_headless_pygame()
+
 import numpy as np
+import pygame.freetype
 import supersuit as ss
 from configs.mpe_scenarios import normalize_mpe_scenario
+
+_configure_headless_pygame()
+
+
+@contextmanager
+def _skip_full_pygame_init_when_headless():
+    if not _headless_pygame_enabled():
+        yield
+        return
+
+    original_init = pygame.init
+
+    def _headless_init():
+        pygame.freetype.init()
+        return (1, 0)
+
+    pygame.init = _headless_init
+    try:
+        yield
+    finally:
+        pygame.init = original_init
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.ERROR)
@@ -11,6 +55,7 @@ logging.getLogger().setLevel(logging.ERROR)
 
 class PettingZooMPEEnv:
     def __init__(self, scenario, seed, continuous_actions, **args):
+        _configure_headless_pygame()
         self.args = copy.deepcopy(args)
         self.scenario = normalize_mpe_scenario(scenario)
         # del self.args["scenario"]
@@ -29,9 +74,10 @@ class PettingZooMPEEnv:
             self.args["max_cycles"] = 26
         self.cur_step = 0
         self.module = importlib.import_module("pettingzoo.mpe." + self.scenario)
-        self.env = ss.pad_action_space_v0(
-            ss.pad_observations_v0(self.module.parallel_env(**self.args))  # Initialize with self.args
-        )
+        with _skip_full_pygame_init_when_headless():
+            self.env = ss.pad_action_space_v0(
+                ss.pad_observations_v0(self.module.parallel_env(**self.args))  # Initialize with self.args
+            )
         self.env.reset()
         self.n_agents = self.env.num_agents
         self.agents = self.env.agents
